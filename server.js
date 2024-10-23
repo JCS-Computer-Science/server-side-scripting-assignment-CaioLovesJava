@@ -26,6 +26,10 @@ server.get('/newgame',(req, res) =>{
 })
 
 server.get('/gamestate', (req, res) => {
+    let gameState = activeSessions[req.query.sessionID]
+    
+    res.status(200)
+    res.send(gameState)
 })
 //Do not remove this line. This allows the test suite to start
 //multiple instances of your server on different ports
