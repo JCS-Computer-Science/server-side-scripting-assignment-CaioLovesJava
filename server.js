@@ -3,16 +3,35 @@ const uuid = require("uuid")
 const server = express();
 server.use(express.json())
 server.use(express.static('public'))
+const fetch = require("node-fetch")
 
 
 //All your code goes here
 let activeSessions={}
 
-server.get('/newgame',(req, res) =>{
+async function randomWordGen() {
+    let response = await fetch('https://api.datamuse.com/words?sp=?????&max=1000')
+    
+    let result = await response.json()
+
+    let randNum = Math.floor(Math.random() * result.length)
+
+    return result[randNum].word
+    
+}
+
+server.get('/newgame',async (req, res) =>{
+    if(req.query.answer && req.query.answer.length == 5){
+        wordleAns = req.query.answer.toLowerCase()
+    }
+    else{
+        wordleAns = await randomWordGen()
+    }
+    
     let newID = uuid.v4()
-    let answer = req.query.answer
+    let answer = req.query.wordleAns
     let newGame = {
-        wordToGuess: "apple",
+        wordToGuess: wordleAns,
         guesses:[],
         wrongLetters: [], 
         rightLetters: [],
@@ -29,9 +48,17 @@ server.get('/newgame',(req, res) =>{
 })
 
 server.get('/gamestate', (req, res) => {
-    let gameState = activeSessions[req.query.sessionID]
-    res.status(200)
-    res.send({gameState: gameState})
+    let sessionID = req.query.sessionID
+    if(activeSessions[sessionID]){
+        res.status(200)
+        res.send({gameState:activeSessions[sessionID]})
+    }else if(!sessionID)
+        res.status(400).send({error: "No sessionID provided"})
+    else{
+        res.status(404)
+        res.send({error: "Session ID does not match any active session"})
+    }
+
     
 })
 
@@ -42,20 +69,30 @@ server.post('/guess', (req, res) => {
     let game = activeSessions[sessionID]
     let answer = game.wordToGuess.split("")
 
-    for(i = 0; i > 5; i++){
-        
+    
+    if(guess.length > 5 || guess.length < 5){
+        res.status(400)
+        res.send({error: "Guess should be 5 letters"})
     }
+    else if(answer == guess){
+        game.gameOver = false
+    }
+    else if(guess.length == 5){
+        for(i = 0; i > 5; i++){
+            if(guess[i] == answer[i]){
+                game.rightLetters.push(answer[i])
+            }
+            else if(answer.includes(guess[i])){
+                game.closeLetters.push(guess[i])
+            }
+            else {
+                game.wrongLetters.push(guess[i])
+            }
+        }
+    }
+    res.send({gameState : game})
 
 })
 //Do not remove this line. This allows the test suite to start
 //multiple instances of your server on different ports
 module.exports = server;
-
-
-
-if(guess[i] == answer[i]){
-
-}else if(answer.includes(guess[i])){
-
-}
-else{}
