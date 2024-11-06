@@ -68,17 +68,26 @@ server.post('/guess', (req, res) => {
     let sessionID = req.body.sessionID
     let game = activeSessions[sessionID]
     let answer = game.wordToGuess.split("")
+    var hasNumber = /\d/;
+    var format = /^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/;
 
-    
-    if(guess.length > 5 || guess.length < 5){
+    if(hasNumber.test(req.body.guess)){
+        res.status(400)
+        res.send({error: "Guess should not include numbers"})
+    }
+    else if(req.body.guess.match(format)){
+        res.status(400)
+        res.send({error: "Guess should not include special characters"})
+    }
+    else if(guess.length > 5 || guess.length < 5){
         res.status(400)
         res.send({error: "Guess should be 5 letters"})
     }
-    else if(answer == guess){
-        game.gameOver = false
+    else if(game.wordToGuess == req.body.guess){
+        game.gameOver = true
     }
     else if(guess.length == 5){
-        for(i = 0; i > 5; i++){
+        for(i = 0; i < 5; i++){
             if(guess[i] == answer[i]){
                 game.rightLetters.push(answer[i])
             }
@@ -89,10 +98,34 @@ server.post('/guess', (req, res) => {
                 game.wrongLetters.push(guess[i])
             }
         }
+        res.send({gameState : game})
     }
-    res.send({gameState : game})
 
 })
+
+server.delete('/reset', (req, res) => {
+    let sessionID = req.query.sessionID
+    
+    if(sessionID){
+
+    }
+
+    else if(!sessionID){
+        res.status(400).send({error: "No sessionID provided"})
+    }else{
+        res.status(404).send({error:"Session ID does not match any active session"})
+    }
+})
+
+server.delete('/delete', (req, res) => {
+    let sessionID = req.query.sessionID
+    if(!sessionID){
+        res.status(400).send({error: "No sessionID provided"})
+    }else{
+        res.status(404).send({error:"Session ID does not match any active session"})
+    }
+})
+
 //Do not remove this line. This allows the test suite to start
 //multiple instances of your server on different ports
 module.exports = server;
